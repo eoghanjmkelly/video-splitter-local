@@ -6,7 +6,7 @@ on:
       - 'v*'
 
 jobs:
-  build:
+  build-and-release:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -26,22 +26,9 @@ jobs:
       - name: Build installer (Linux)
         if: matrix.os == 'ubuntu-latest'
         run: npm run dist:linux
-      - name: Upload installers
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.os }}-installers-${{ github.run_number }}-${{ github.ref_name }}-${{ github.sha }}
-          path: dist/*
-  release:
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
-        with:
-          path: dist
-      - name: Create Release
+      - name: Create Release and Upload Binaries
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/**/*
+          files: dist/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
