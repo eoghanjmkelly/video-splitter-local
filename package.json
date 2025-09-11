@@ -1,0 +1,30 @@
+{
+  "type": "module",
+  "bin": {
+    "video-splitter": "tools/split-local.js"
+  },
+  "scripts": {
+    "start": "node tools/split-local.js",
+    "build:bundle": "ncc build tools/split-local.js -o dist",
+    "build:pkg:win": "pkg dist/index.js --targets node18-win-x64 --output releases/splitter-win-x64.exe",
+    "build:pkg:mac": "pkg dist/index.js --targets node18-macos-x64 --output releases/splitter-mac-x64",
+    "build:pkg:linux": "pkg dist/index.js --targets node18-linux-x64 --output releases/splitter-linux-x64",
+    "build": "npm run build:bundle && npm run build:pkg:win && npm run build:pkg:mac && npm run build:pkg:linux"
+  },
+  "pkg": {
+    "assets": [
+      "node_modules/ffmpeg-static/**"
+    ]
+  },
+  "dependencies": {
+    "ffmpeg-static": "^5",
+    "fluent-ffmpeg": "^2",
+    "prompts": "^2",
+    "ora": "^8",
+    "pretty-bytes": "^6"
+  },
+  "devDependencies": {
+    "@vercel/ncc": "^0.38",
+    "pkg": "^5"
+  }
+}
