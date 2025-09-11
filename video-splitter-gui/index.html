@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Video Splitter GUI</title>
+  <style>
+    body { font-family: sans-serif; margin: 2em; }
+    #progress { margin-top: 1em; }
+    .bar { width: 100%; background: #eee; border-radius: 4px; margin-bottom: 0.5em; }
+    .bar-inner { height: 18px; background: #4caf50; border-radius: 4px; width: 0; transition: width 0.2s; }
+    #outputs { margin-top: 1em; }
+    button { margin-top: 1em; }
+  </style>
+</head>
+<body>
+  <h2>Local Video Splitter</h2>
+  <button id="select">Select Video File</button>
+  <span id="file"></span>
+  <div>
+    <label>Target chunk size (MB): <input id="targetMB" type="number" value="1536" min="100" max="4096"></label>
+  </div>
+  <button id="split" disabled>Split Video</button>
+  <div id="progress"></div>
+  <div id="outputs"></div>
+  <div id="deleteDiv" style="display:none">
+    <button id="delete">Delete Original File</button>
+    <span id="deleteMsg"></span>
+  </div>
+  <script src="renderer.js"></script>
+</body>
+</html>

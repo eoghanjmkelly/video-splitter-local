@@ -1,0 +1,19 @@
+{
+  "name": "video-splitter-gui",
+  "version": "1.0.0",
+  "description": "Electron GUI for local video splitting into ~1.5GB chunks.",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "echo 'Add electron-builder or similar for packaging'"
+  },
+  "dependencies": {
+    "electron": "^29.0.0",
+    "ffmpeg-static": "^5.0.0",
+  "ffprobe-static": "^3.1.0",
+    "pretty-bytes": "^6.0.0"
+  },
+  "devDependencies": {},
+  "author": "",
+  "license": "MIT"
+}
