@@ -17,15 +17,19 @@ jobs:
         with:
           node-version: 18
       - run: npm install
-      - name: Build installer
-        run: |
-          if [ "${{ matrix.os }}" = "windows-latest" ]; then npm run dist:win; fi
-          if [ "${{ matrix.os }}" = "macos-latest" ]; then npm run dist:mac; fi
-          if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then npm run dist:linux; fi
+      - name: Build installer (Windows)
+        if: matrix.os == 'windows-latest'
+        run: npm run dist:win
+      - name: Build installer (macOS)
+        if: matrix.os == 'macos-latest'
+        run: npm run dist:mac
+      - name: Build installer (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: npm run dist:linux
       - name: Upload installers
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.os }}-installers
+          name: ${{ matrix.os }}-installers-${{ github.run_number }}-${{ github.ref_name }}
           path: dist/*
   release:
     needs: build
