@@ -1,3 +1,53 @@
+const mergeInput = document.getElementById('mergeInput');
+const mergeBtn = document.getElementById('mergeBtn');
+const mergeProgress = document.getElementById('mergeProgress');
+
+mergeBtn.addEventListener('click', async () => {
+  if (!mergeInput.files.length) {
+    mergeProgress.textContent = 'Please select at least two videos.';
+    return;
+  }
+  const files = Array.from(mergeInput.files).map(f => f.path);
+  if (files.length < 2) {
+    mergeProgress.textContent = 'Select at least two videos to merge.';
+    return;
+  }
+  mergeProgress.textContent = 'Merging...';
+  const result = await ipcRenderer.invoke('merge-videos', files);
+  if (result.success) {
+    mergeProgress.textContent = `Merged video saved to: ${result.output}`;
+  } else {
+    mergeProgress.textContent = `Error: ${result.error}`;
+  }
+});
+let inputPaths = [];
+let mergeOutput = '';
+
+document.getElementById('select-multi').onclick = async () => {
+  inputPaths = await ipcRenderer.invoke('select-multiple-files');
+  document.getElementById('multi-files').textContent = inputPaths && inputPaths.length ? inputPaths.join(', ') : '';
+  document.getElementById('merge').disabled = !(inputPaths && inputPaths.length > 1);
+};
+
+document.getElementById('mergeOutput').oninput = (e) => {
+  mergeOutput = e.target.value;
+};
+
+document.getElementById('merge').onclick = async () => {
+  if (!inputPaths || inputPaths.length < 2) return;
+  let outputPath = mergeOutput || 'output.mp4';
+  // If not absolute, save next to first input
+  if (!/^[A-Za-z]:\\|\//.test(outputPath)) {
+    outputPath = require('path').join(require('path').dirname(inputPaths[0]), outputPath);
+  }
+  document.getElementById('mergeProgress').textContent = 'Merging...';
+  const result = await ipcRenderer.invoke('merge-videos', { inputPaths, outputPath });
+  if (result.success) {
+    document.getElementById('mergeProgress').textContent = 'Merged to: ' + result.output;
+  } else {
+    document.getElementById('mergeProgress').textContent = 'Error: ' + result.error;
+  }
+};
 const { ipcRenderer } = require('electron');
 
 let inputPath = null;

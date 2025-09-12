@@ -1,9 +1,9 @@
+
 const { app, BrowserWindow, dialog, ipcMain } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
 const { spawn } = require('child_process');
-
 const ffmpegPath = require('ffmpeg-static');
 let ffprobePath;
 try {
@@ -12,9 +12,7 @@ try {
   ffprobePath = ffmpegPath.replace(/ffmpeg(\.exe)?$/, 'ffprobe$1');
 }
 
-let prettyBytes;
-import('pretty-bytes').then(mod => { prettyBytes = mod.default; });
-
+// Open the main window
 function createWindow() {
   const win = new BrowserWindow({
     width: 600,
@@ -26,9 +24,9 @@ function createWindow() {
   });
   win.loadFile('index.html');
 }
-
 app.whenReady().then(createWindow);
 
+// Select a single file for splitting
 ipcMain.handle('select-file', async () => {
   const { canceled, filePaths } = await dialog.showOpenDialog({
     properties: ['openFile'],
@@ -38,6 +36,17 @@ ipcMain.handle('select-file', async () => {
   return filePaths[0];
 });
 
+// Select multiple files for merging
+ipcMain.handle('select-multiple-files', async () => {
+  const { canceled, filePaths } = await dialog.showOpenDialog({
+    properties: ['openFile', 'multiSelections'],
+    filters: [{ name: 'Videos', extensions: ['mp4', 'mkv', 'mov', 'avi', 'webm'] }]
+  });
+  if (canceled) return [];
+  return filePaths;
+});
+
+// Split video into chunks
 ipcMain.handle('split-video', async (event, { inputPath, targetMB }) => {
   // Probe duration and bitrate
   function ffprobePromise() {
@@ -119,6 +128,74 @@ ipcMain.handle('split-video', async (event, { inputPath, targetMB }) => {
   return { outputs, outDir };
 });
 
+// Merge videos (array of file paths, save dialog)
+ipcMain.handle('merge-videos', async (event, files) => {
+  try {
+    const { filePath } = await dialog.showSaveDialog({
+      title: 'Save Merged Video As',
+      defaultPath: path.join(path.dirname(files[0]), 'merged.mp4'),
+      filters: [{ name: 'MP4 Video', extensions: ['mp4'] }]
+    });
+    if (!filePath) return { success: false, error: 'Save cancelled.' };
+    const fileListPath = path.join(os.tmpdir(), `ffmpeg-merge-list-${Date.now()}.txt`);
+    fs.writeFileSync(
+      fileListPath,
+      files.map(f => `file '${f.replace(/'/g, "'\\''")}'`).join('\n')
+    );
+    return await new Promise((resolve) => {
+      const ffmpegArgs = [
+        '-f', 'concat',
+        '-safe', '0',
+        '-i', fileListPath,
+        '-c', 'copy',
+        filePath
+      ];
+      const ffmpeg = spawn(ffmpegPath, ffmpegArgs);
+      ffmpeg.stderr.on('data', data => {
+        // Optionally, parse progress here and send to renderer
+      });
+      ffmpeg.on('close', code => {
+        fs.unlinkSync(fileListPath);
+        if (code === 0) {
+          resolve({ success: true, output: filePath });
+        } else {
+          resolve({ success: false, error: 'ffmpeg failed. Files may not be compatible for direct merge.' });
+        }
+      });
+    });
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
+// Merge videos (object with inputPaths/outputPath)
+ipcMain.handle('merge-videos', async (event, { inputPaths, outputPath }) => {
+  if (!inputPaths || inputPaths.length < 2) return { error: 'Select at least two files.' };
+  const tmpList = path.join(app.getPath('temp'), `concat-list-${Date.now()}.txt`);
+  try {
+    fs.writeFileSync(tmpList, inputPaths.map(f => `file '${f.replace(/'/g, "'\\''")}'`).join('\n'));
+    const args = [
+      '-hide_banner', '-y',
+      '-f', 'concat', '-safe', '0', '-i', tmpList,
+      '-c', 'copy', outputPath
+    ];
+    await new Promise((resolve, reject) => {
+      const proc = spawn(ffmpegPath, args);
+      proc.stderr.on('data', chunk => {
+        // Optionally, parse progress here
+      });
+      proc.on('close', code => code === 0 ? resolve() : reject(new Error('ffmpeg failed')));
+      proc.on('error', reject);
+    });
+    fs.unlinkSync(tmpList);
+    return { success: true, output: outputPath };
+  } catch (e) {
+    if (fs.existsSync(tmpList)) fs.unlinkSync(tmpList);
+    return { error: e.message };
+  }
+});
+
+// Delete original file handler
 ipcMain.handle('delete-original', async (event, inputPath) => {
   try {
     fs.unlinkSync(inputPath);
