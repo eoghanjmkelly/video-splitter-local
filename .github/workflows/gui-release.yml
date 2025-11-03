@@ -1,0 +1,106 @@
+name: Build & Release GUI Apps
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+      - name: Build Video Merger (portable)
+        working-directory: video-merger-gui
+        run: |
+          npm ci
+          npm run pack
+          Compress-Archive -Path dist/VideoMergerGUI-win32-x64/* -DestinationPath ../VideoMergerGUI-windows-x64.zip -Force
+      - name: Build Video Splitter (portable)
+        working-directory: video-splitter-gui
+        run: |
+          npm ci
+          npm run pack
+          Compress-Archive -Path dist/VideoSplitterGUI-win32-x64/* -DestinationPath ../VideoSplitterGUI-windows-x64.zip -Force
+      - name: Upload Windows Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-gui
+          path: |
+            VideoMergerGUI-windows-x64.zip
+            VideoSplitterGUI-windows-x64.zip
+
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+      - name: Build Video Merger (DMG)
+        working-directory: video-merger-gui
+        run: |
+          npm ci
+          npm run dist:mac
+      - name: Build Video Splitter (DMG)
+        working-directory: video-splitter-gui
+        run: |
+          npm ci
+          npm run dist:mac
+      - name: Upload macOS Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-gui
+          path: |
+            video-merger-gui/dist/*.dmg
+            video-splitter-gui/dist/*.dmg
+
+  build-linux:
+    runs-on: ubuntu-latest
+    container: electronuserland/builder:latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use Node 18
+        run: |
+          . /root/.nvm/nvm.sh
+          nvm install 18
+          nvm use 18
+      - name: Build Video Merger (AppImage)
+        working-directory: video-merger-gui
+        run: |
+          npm ci
+          npm run dist:linux
+      - name: Build Video Splitter (AppImage)
+        working-directory: video-splitter-gui
+        run: |
+          npm ci
+          npm run dist:linux
+      - name: Upload Linux Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-gui
+          path: |
+            video-merger-gui/dist/*.AppImage
+            video-merger-gui/dist/*.deb
+            video-merger-gui/dist/*.rpm
+            video-splitter-gui/dist/*.AppImage
+            video-splitter-gui/dist/*.deb
+            video-splitter-gui/dist/*.rpm
+
+  release:
+    needs: [build-windows, build-macos, build-linux]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/**/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

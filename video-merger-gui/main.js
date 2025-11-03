@@ -9,10 +9,10 @@ function resolveFfmpegPath() {
   const defaultPath = require('ffmpeg-static');
   const candidates = [defaultPath];
   if (app.isPackaged) {
-    // electron-builder (asar) unpacked path
-    candidates.push(path.join(process.resourcesPath, 'app.asar.unpacked', 'node_modules', 'ffmpeg-static', 'ffmpeg.exe'));
-    // electron-packager: resources/app/node_modules path
-    candidates.push(path.join(process.resourcesPath, 'app', 'node_modules', 'ffmpeg-static', 'ffmpeg.exe'));
+    // electron-builder (asar) unpacked path (Windows + *nix)
+    candidates.push(path.join(process.resourcesPath, 'app.asar.unpacked', 'node_modules', 'ffmpeg-static', process.platform === 'win32' ? 'ffmpeg.exe' : 'ffmpeg'));
+    // electron-packager: resources/app/node_modules path (Windows + *nix)
+    candidates.push(path.join(process.resourcesPath, 'app', 'node_modules', 'ffmpeg-static', process.platform === 'win32' ? 'ffmpeg.exe' : 'ffmpeg'));
   }
   for (const p of candidates) {
     try {

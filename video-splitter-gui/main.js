@@ -4,10 +4,24 @@ const fs = require('fs');
 const os = require('os');
 const { spawn } = require('child_process');
 
-const ffmpegPath = require('ffmpeg-static');
+function resolveBinary(baseModulePath, binaryName) {
+  const defaultPath = baseModulePath;
+  const candidates = [defaultPath];
+  if (app.isPackaged) {
+    const binFile = process.platform === 'win32' ? `${binaryName}.exe` : binaryName;
+    candidates.push(path.join(process.resourcesPath, 'app.asar.unpacked', 'node_modules', `${binaryName}-static`, binFile));
+    candidates.push(path.join(process.resourcesPath, 'app', 'node_modules', `${binaryName}-static`, binFile));
+  }
+  for (const p of candidates) {
+    try { if (p && fs.existsSync(p)) return p; } catch {}
+  }
+  return defaultPath;
+}
+
+let ffmpegPath = resolveBinary(require('ffmpeg-static'), 'ffmpeg');
 let ffprobePath;
 try {
-  ffprobePath = require('ffprobe-static').path;
+  ffprobePath = resolveBinary(require('ffprobe-static').path, 'ffprobe');
 } catch (e) {
   ffprobePath = ffmpegPath.replace(/ffmpeg(\.exe)?$/, 'ffprobe$1');
 }
@@ -95,7 +109,7 @@ ipcMain.handle('split-video', async (event, { inputPath, targetMB }) => {
     ];
     let progress = 0;
     await new Promise((resolve, reject) => {
-      const proc = spawn(ffmpegPath, args);
+  let proc = spawn(ffmpegPath, args);
       proc.stderr.on('data', chunk => {
         const m = /time=([0-9:.]+)/.exec(chunk.toString());
         if (m) {
@@ -113,7 +127,31 @@ ipcMain.handle('split-video', async (event, { inputPath, targetMB }) => {
           reject(new Error('ffmpeg failed'));
         }
       });
-      proc.on('error', reject);
+      proc.on('error', (err) => {
+        if (err && err.code === 'ENOENT') {
+          const retry = resolveBinary(require('ffmpeg-static'), 'ffmpeg');
+          if (retry !== ffmpegPath && fs.existsSync(retry)) {
+            ffmpegPath = retry;
+            proc = spawn(ffmpegPath, args);
+            proc.stderr.on('data', chunk => {
+              const m = /time=([0-9:.]+)/.exec(chunk.toString());
+              if (m) {
+                const [h, m1, s] = m[1].split(':').map(Number);
+                const sec = h*3600 + m1*60 + s;
+                progress = Math.min(100, Math.round(100 * sec / segDur));
+                event.sender.send('segment-progress', { segment: i+1, total: numSegments, progress });
+              }
+            });
+            proc.on('close', code => {
+              if (code === 0) { outputs.push(outPath); resolve(); }
+              else { reject(new Error('ffmpeg failed')); }
+            });
+            proc.on('error', reject);
+            return;
+          }
+        }
+        reject(err);
+      });
     });
   }
   return { outputs, outDir };

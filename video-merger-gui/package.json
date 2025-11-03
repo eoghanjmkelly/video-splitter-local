@@ -7,6 +7,8 @@
     "start": "electron .",
     "pack": "electron-packager . VideoMergerGUI --platform=win32 --arch=x64 --out=dist --overwrite",
     "dist:win": "electron-builder --win --x64",
+    "dist:mac": "electron-builder --mac",
+    "dist:linux": "electron-builder --linux",
     "dist": "electron-builder --win --x64"
   },
   "dependencies": {
@@ -30,7 +32,8 @@
       "output": "dist"
     },
     "asarUnpack": [
-      "node_modules/ffmpeg-static/ffmpeg.exe"
+      "node_modules/ffmpeg-static/**",
+      "node_modules/ffprobe-static/**"
     ],
     "win": {
       "target": [
@@ -40,7 +43,13 @@
         }
       ]
     },
-    "mac": false,
+    "mac": {
+      "target": "dmg"
+    },
+    "linux": {
+      "target": ["AppImage", "deb", "rpm"],
+      "category": "Utility"
+    },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
