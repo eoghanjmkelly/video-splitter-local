@@ -3,11 +3,29 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 const { spawn } = require('child_process');
-let ffmpegPath = require('ffmpeg-static');
-// Use correct ffmpeg path depending on environment
-if (app.isPackaged) {
-  ffmpegPath = path.join(process.resourcesPath, 'app.asar.unpacked', 'node_modules', 'ffmpeg-static', 'ffmpeg.exe');
+
+function resolveFfmpegPath() {
+  // Start with the path provided by ffmpeg-static
+  const defaultPath = require('ffmpeg-static');
+  const candidates = [defaultPath];
+  if (app.isPackaged) {
+    // electron-builder (asar) unpacked path
+    candidates.push(path.join(process.resourcesPath, 'app.asar.unpacked', 'node_modules', 'ffmpeg-static', 'ffmpeg.exe'));
+    // electron-packager: resources/app/node_modules path
+    candidates.push(path.join(process.resourcesPath, 'app', 'node_modules', 'ffmpeg-static', 'ffmpeg.exe'));
+  }
+  for (const p of candidates) {
+    try {
+      if (p && fs.existsSync(p)) return p;
+    } catch {
+      // ignore
+    }
+  }
+  // Fall back to whatever ffmpeg-static returned even if not found; spawn will error with a clear path
+  return defaultPath;
 }
+
+let ffmpegPath = resolveFfmpegPath();
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -21,6 +39,22 @@ function createWindow() {
   win.loadFile('index.html');
 }
 app.whenReady().then(createWindow);
+
+// IPC handler to delete originals after merge
+ipcMain.handle('delete-originals', async (event, files) => {
+  try {
+    for (const f of files) {
+      try {
+        fs.unlinkSync(f);
+      } catch (e) {
+        return { success: false, error: `Failed to delete ${f}: ${e.message}` };
+      }
+    }
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
 
 ipcMain.handle('merge-videos', async (event, { inputPaths, outputPath, deleteOriginals }) => {
   if (!inputPaths || inputPaths.length < 2) return { error: 'Select at least two files.' };
@@ -62,25 +96,27 @@ ipcMain.handle('merge-videos', async (event, { inputPaths, outputPath, deleteOri
           reject(new Error('ffmpeg failed. Files may not be compatible for direct merge.'));
         }
       });
-      ffmpeg.on('error', reject);
+      ffmpeg.on('error', (err) => {
+        // If spawn failed due to missing binary in one path, try re-resolving once
+        if (err && err.code === 'ENOENT') {
+          const retryPath = resolveFfmpegPath();
+          if (retryPath !== ffmpegPath && fs.existsSync(retryPath)) {
+            ffmpegPath = retryPath;
+            const ff2 = spawn(ffmpegPath, ffmpegArgs);
+            ff2.stderr.on('data', data => event.sender.send('merge-progress', { progress: null }));
+            ff2.on('close', code => {
+              if (fs.existsSync(fileListPath)) fs.unlinkSync(fileListPath);
+              code === 0 ? resolve() : reject(new Error('ffmpeg failed. Files may not be compatible for direct merge.'));
+            });
+            ff2.on('error', reject);
+            return;
+          }
+        }
+        reject(err);
+      });
     });
     // Deletion of originals is now handled by a separate IPC event after merge
     return { success: true, output: outputPath };
-// IPC handler to delete originals after merge
-ipcMain.handle('delete-originals', async (event, files) => {
-  try {
-    for (const f of files) {
-      try {
-        fs.unlinkSync(f);
-      } catch (e) {
-        return { success: false, error: `Failed to delete ${f}: ${e.message}` };
-      }
-    }
-    return { success: true };
-  } catch (err) {
-    return { success: false, error: err.message };
-  }
-});
   } catch (err) {
     if (fs.existsSync(fileListPath)) fs.unlinkSync(fileListPath);
     return { success: false, error: err.message };

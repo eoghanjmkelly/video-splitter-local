@@ -16,6 +16,11 @@
   <h2>Video Merger</h2>
   <input type="file" id="mergeInput" multiple accept="video/*">
   <button id="mergeBtn">Merge Selected Videos</button>
+  <div id="fileListSection">
+    <h3>Order to merge</h3>
+    <p>Select videos above, then adjust their order below.</p>
+    <ul id="fileList"></ul>
+  </div>
   <div id="mergeProgress"></div>
   <div id="outputs"></div>
   <script src="renderer.js"></script>

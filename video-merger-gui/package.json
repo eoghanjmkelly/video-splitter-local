@@ -35,11 +35,10 @@
     "win": {
       "target": [
         {
-          "target": "nsis",
+          "target": "portable",
           "arch": ["x64"]
         }
-      ],
-      "sign": false
+      ]
     },
     "mac": false,
     "nsis": {
