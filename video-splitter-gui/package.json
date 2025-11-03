@@ -1,6 +1,6 @@
 {
   "name": "video-splitter-gui",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "description": "Electron GUI for local video splitting into ~1.5GB chunks.",
   "main": "main.js",
   "scripts": {
