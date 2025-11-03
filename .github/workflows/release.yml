@@ -26,7 +26,7 @@ jobs:
       - name: Upload binaries
         uses: actions/upload-artifact@v4
         with:
-          name: binaries
+          name: binaries-${{ matrix.os }}
           path: releases/*
   release:
     needs: build
@@ -35,7 +35,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
-          name: binaries
+          pattern: binaries-*
+          merge-multiple: true
           path: releases
       - name: Create Release
         uses: softprops/action-gh-release@v2
