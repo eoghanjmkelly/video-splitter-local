@@ -1,6 +1,6 @@
 {
   "name": "video-merger-gui",
-  "version": "2.0.2",
+  "version": "2.0.3",
   "description": "Electron GUI for merging multiple videos into one.",
   "main": "main.js",
   "scripts": {
