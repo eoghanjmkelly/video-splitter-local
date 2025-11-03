@@ -44,11 +44,13 @@
       ]
     },
     "mac": {
-      "target": "dmg"
+      "target": "dmg",
+      "artifactName": "${productName}-mac.${ext}"
     },
     "linux": {
       "target": ["AppImage", "deb", "rpm"],
-      "category": "Utility"
+      "category": "Utility",
+      "artifactName": "${productName}-${os}-${arch}.${ext}"
     },
     "nsis": {
       "oneClick": false,

@@ -22,6 +22,26 @@ We publish builds on GitHub Releases. To download the latest version:
 		 - `*.rpm` for Fedora/RHEL/openSUSE
 			 - `sudo rpm -i <file>.rpm`
 
+Direct links to the latest release assets (always point to the newest tag):
+
+- Video Merger (Windows):
+	- https://github.com/eoghanjmkelly/video-splitter-local/releases/latest/download/VideoMergerGUI-windows-x64.zip
+- Video Merger (macOS DMG):
+	- https://github.com/eoghanjmkelly/video-splitter-local/releases/latest/download/VideoMergerGUI-mac.dmg
+- Video Merger (Linux):
+	- AppImage: https://github.com/eoghanjmkelly/video-splitter-local/releases/latest/download/VideoMergerGUI-linux-x64.AppImage
+	- DEB:      https://github.com/eoghanjmkelly/video-splitter-local/releases/latest/download/VideoMergerGUI-linux-x64.deb
+	- RPM:      https://github.com/eoghanjmkelly/video-splitter-local/releases/latest/download/VideoMergerGUI-linux-x64.rpm
+
+- Video Splitter (Windows):
+	- https://github.com/eoghanjmkelly/video-splitter-local/releases/latest/download/VideoSplitterGUI-windows-x64.zip
+- Video Splitter (macOS DMG):
+	- https://github.com/eoghanjmkelly/video-splitter-local/releases/latest/download/VideoSplitterGUI-mac.dmg
+- Video Splitter (Linux):
+	- AppImage: https://github.com/eoghanjmkelly/video-splitter-local/releases/latest/download/VideoSplitterGUI-linux-x64.AppImage
+	- DEB:      https://github.com/eoghanjmkelly/video-splitter-local/releases/latest/download/VideoSplitterGUI-linux-x64.deb
+	- RPM:      https://github.com/eoghanjmkelly/video-splitter-local/releases/latest/download/VideoSplitterGUI-linux-x64.rpm
+
 Notes:
 - Windows SmartScreen may warn for unsigned apps. Click “More info” → “Run anyway”.
 - macOS will warn if not notarized. Right‑click the app → Open → confirm. We can enable notarization once Apple Developer credentials are provided.
