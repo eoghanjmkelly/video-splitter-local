@@ -1,10 +1,10 @@
 
-name: Build Multi-Platform Installers
+name: Build Multi-Platform Installers (legacy CLI)
 
 on:
-  push:
-    tags:
-      - 'v*'
+  # Disabled by default to avoid conflicts with GUI release workflow.
+  # Run manually from the Actions tab if you specifically want to build the legacy root scripts.
+  workflow_dispatch:
 
 jobs:
   build-windows:
