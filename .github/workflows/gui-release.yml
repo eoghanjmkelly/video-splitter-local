@@ -67,11 +67,10 @@ jobs:
     container: electronuserland/builder:latest
     steps:
       - uses: actions/checkout@v4
-      - name: Use Node 18
+      - name: Check Node version in container
         run: |
-          . /root/.nvm/nvm.sh
-          nvm install 18
-          nvm use 18
+          node -v
+          npm -v
       - name: Build Video Merger (AppImage)
         working-directory: video-merger-gui
         run: |
