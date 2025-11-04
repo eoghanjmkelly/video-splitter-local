@@ -1,0 +1,43 @@
+name: Node Audit
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+      - name: Root npm ci
+        run: npm ci || true
+      - name: Root npm audit
+        run: npm audit --audit-level=high > audit-root.txt 2>&1 || true
+      - name: Video Merger npm ci
+        working-directory: video-merger-gui
+        run: npm ci || true
+      - name: Video Merger npm audit
+        working-directory: video-merger-gui
+        run: npm audit --audit-level=high > ../audit-merger.txt 2>&1 || true
+      - name: Video Splitter npm ci
+        working-directory: video-splitter-gui
+        run: npm ci || true
+      - name: Video Splitter npm audit
+        working-directory: video-splitter-gui
+        run: npm audit --audit-level=high > ../audit-splitter.txt 2>&1 || true
+      - name: Upload audit artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: npm-audit-reports
+          path: |
+            audit-root.txt
+            audit-merger.txt
+            audit-splitter.txt
