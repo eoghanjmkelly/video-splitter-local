@@ -75,4 +75,4 @@ npm start
 ```
 
 ## License
-MIT
+Licensed under the MIT License – see `LICENSE`. See also `THIRD_PARTY_NOTICES.md` for bundled third‑party licenses and notices.

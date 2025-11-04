@@ -2,12 +2,17 @@
 node_modules/
 dist/
 releases/
+build/
+out/
 *.log
 npm-debug.log*
 yarn-debug.log*
 .yarn/*
 .pnpm-debug.log*
 coverage/
+.cache/
+tmp/
+temp/
 
 # OS / Editors
 .DS_Store
@@ -21,6 +26,22 @@ Thumbs.db
 *.map
 *.zip
 *.tgz
+*.tar.gz
+*.rpm
+
+# Env & config (do not commit secrets)
+.env
+.env.*
+.env.local
+.env.*.local
+.npmrc
+*.pem
+*.pfx
+*.p12
+*.keystore
+id_rsa*
+*.sqlite
+*.db
 
 # pkg / binaries
 *.exe
