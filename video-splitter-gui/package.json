@@ -3,6 +3,11 @@
   "version": "2.0.3",
   "description": "Electron GUI for local video splitting into ~1.5GB chunks.",
   "main": "main.js",
+  "homepage": "https://github.com/eoghanjmkelly/video-splitter-local",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/eoghanjmkelly/video-splitter-local.git"
+  },
   "scripts": {
     "start": "electron .",
     "pack": "electron-packager . VideoSplitterGUI --platform=win32 --arch=x64 --out=dist --overwrite",
@@ -58,9 +63,10 @@
     "linux": {
       "target": ["AppImage", "deb", "rpm"],
       "category": "Utility",
-      "artifactName": "${productName}-${os}-${arch}.${ext}"
+      "artifactName": "${productName}-${os}-${arch}.${ext}",
+      "maintainer": "eoghanjmkelly <eoghanjmkelly@users.noreply.github.com>"
     }
   },
-  "author": "",
+  "author": "eoghanjmkelly <eoghanjmkelly@users.noreply.github.com>",
   "license": "MIT"
 }

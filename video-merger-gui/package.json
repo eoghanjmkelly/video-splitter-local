@@ -3,6 +3,11 @@
   "version": "2.0.3",
   "description": "Electron GUI for merging multiple videos into one.",
   "main": "main.js",
+  "homepage": "https://github.com/eoghanjmkelly/video-splitter-local",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/eoghanjmkelly/video-splitter-local.git"
+  },
   "scripts": {
     "start": "electron .",
     "pack": "electron-packager . VideoMergerGUI --platform=win32 --arch=x64 --out=dist --overwrite",
@@ -50,7 +55,8 @@
     "linux": {
       "target": ["AppImage", "deb", "rpm"],
       "category": "Utility",
-      "artifactName": "${productName}-${os}-${arch}.${ext}"
+      "artifactName": "${productName}-${os}-${arch}.${ext}",
+      "maintainer": "eoghanjmkelly <eoghanjmkelly@users.noreply.github.com>"
     },
     "nsis": {
       "oneClick": false,
@@ -60,6 +66,6 @@
       "shortcutName": "VideoMergerGUI"
     }
   },
-  "author": "",
+  "author": "eoghanjmkelly <eoghanjmkelly@users.noreply.github.com>",
   "license": "MIT"
 }
