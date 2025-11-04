@@ -52,7 +52,7 @@ Tagging a commit like `v1.0.0` triggers CI to build and upload binaries automati
 
 - Windows: portable zips (no install needed)
 - macOS: DMG installers
-- Linux: AppImage
+- Linux: AppImage, DEB, and RPM packages
 
 ## Development
 Each app lives in its own folder:

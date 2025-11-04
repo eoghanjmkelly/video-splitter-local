@@ -1,6 +1,6 @@
 {
   "name": "video-merger-gui",
-  "version": "2.0.3",
+  "version": "2.0.5",
   "description": "Electron GUI for merging multiple videos into one.",
   "main": "main.js",
   "homepage": "https://github.com/eoghanjmkelly/video-splitter-local",
@@ -14,7 +14,7 @@
     "dist:win": "electron-builder --win --x64",
   "dist:mac": "electron-builder --mac --publish never",
   "dist:linux": "electron-builder --linux --publish never",
-    "dist": "electron-builder --win --x64"
+  "dist": "electron-builder --win --x64"
   },
   "dependencies": {
     "ffmpeg-static": "^5.0.0",
