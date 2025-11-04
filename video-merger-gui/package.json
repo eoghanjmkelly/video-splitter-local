@@ -12,8 +12,8 @@
     "start": "electron .",
     "pack": "electron-packager . VideoMergerGUI --platform=win32 --arch=x64 --out=dist --overwrite",
     "dist:win": "electron-builder --win --x64",
-    "dist:mac": "electron-builder --mac",
-    "dist:linux": "electron-builder --linux",
+  "dist:mac": "electron-builder --mac --publish never",
+  "dist:linux": "electron-builder --linux --publish never",
     "dist": "electron-builder --win --x64"
   },
   "dependencies": {
