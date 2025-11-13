@@ -2,24 +2,45 @@ const { app, BrowserWindow, dialog, ipcMain } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
-const { spawn } = require('child_process');
+const { spawn, spawnSync } = require('child_process');
+
+function which(cmd) {
+  try {
+    const isWin = process.platform === 'win32';
+    const out = spawnSync(isWin ? 'where' : 'which', [cmd], { encoding: 'utf8' });
+    if (out.status === 0 && out.stdout) {
+      const first = out.stdout.split(/\r?\n/).find(Boolean);
+      return first ? first.trim() : null;
+    }
+  } catch {}
+  return null;
+}
+
+function normalizeAsarPath(p) {
+  if (!p) return p;
+  if (p.includes('app.asar')) {
+    const fixed = p.replace(/app\.asar(?!\.unpacked)/, 'app.asar.unpacked');
+    try { if (fs.existsSync(fixed)) return fixed; } catch {}
+  }
+  return p;
+}
 
 function resolveFfmpegPath() {
   // Start with the path provided by ffmpeg-static
-  const defaultPath = require('ffmpeg-static');
-  const candidates = [defaultPath];
+  const defaultPath = normalizeAsarPath(require('ffmpeg-static'));
+  const candidates = [];
+  if (defaultPath) candidates.push(defaultPath);
   if (app.isPackaged) {
     // electron-builder (asar) unpacked path (Windows + *nix)
     candidates.push(path.join(process.resourcesPath, 'app.asar.unpacked', 'node_modules', 'ffmpeg-static', process.platform === 'win32' ? 'ffmpeg.exe' : 'ffmpeg'));
     // electron-packager: resources/app/node_modules path (Windows + *nix)
     candidates.push(path.join(process.resourcesPath, 'app', 'node_modules', 'ffmpeg-static', process.platform === 'win32' ? 'ffmpeg.exe' : 'ffmpeg'));
   }
+  // Fallback to system PATH
+  const sys = which('ffmpeg');
+  if (sys) candidates.push(sys);
   for (const p of candidates) {
-    try {
-      if (p && fs.existsSync(p)) return p;
-    } catch {
-      // ignore
-    }
+    try { if (p && fs.existsSync(p)) return p; } catch {}
   }
   // Fall back to whatever ffmpeg-static returned even if not found; spawn will error with a clear path
   return defaultPath;
@@ -98,7 +119,7 @@ ipcMain.handle('merge-videos', async (event, { inputPaths, outputPath, deleteOri
       });
       ffmpeg.on('error', (err) => {
         // If spawn failed due to missing binary in one path, try re-resolving once
-        if (err && err.code === 'ENOENT') {
+        if (err && (err.code === 'ENOENT' || err.code === 'ENOTDIR')) {
           const retryPath = resolveFfmpegPath();
           if (retryPath !== ffmpegPath && fs.existsSync(retryPath)) {
             ffmpegPath = retryPath;
@@ -112,7 +133,7 @@ ipcMain.handle('merge-videos', async (event, { inputPaths, outputPath, deleteOri
             return;
           }
         }
-        reject(err);
+        reject(new Error(`ffmpeg spawn error: ${err.code || err.message} (path=${ffmpegPath || 'null'})`));
       });
     });
     // Deletion of originals is now handled by a separate IPC event after merge
