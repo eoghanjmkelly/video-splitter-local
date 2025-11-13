@@ -16,13 +16,23 @@ function which(cmd) {
   return null;
 }
 
+function normalizeAsarPath(p) {
+  if (!p) return p;
+  if (p.includes('app.asar')) {
+    const fixed = p.replace(/app\.asar(?!\.unpacked)/, 'app.asar.unpacked');
+    try { if (fs.existsSync(fixed)) return fixed; } catch {}
+  }
+  return p;
+}
+
 function resolveBinary(baseModulePath, binaryName) {
   const defaultPath = baseModulePath; // e.g. ffmpeg-static path string
   const candidates = [];
-  if (defaultPath) candidates.push(defaultPath);
+  if (defaultPath) candidates.push(normalizeAsarPath(defaultPath));
   if (app.isPackaged) {
     const binFile = process.platform === 'win32' ? `${binaryName}.exe` : binaryName;
     candidates.push(path.join(process.resourcesPath, 'app.asar.unpacked', 'node_modules', `${binaryName}-static`, binFile));
+    // Some packagers mount resources/app instead of app.asar; normalize just in case
     candidates.push(path.join(process.resourcesPath, 'app', 'node_modules', `${binaryName}-static`, binFile));
   }
   // Fallback to system PATH
@@ -73,6 +83,7 @@ ipcMain.handle('split-video', async (event, { inputPath, targetMB }) => {
   // Probe duration and bitrate
   function ffprobePromise() {
     return new Promise((resolve, reject) => {
+      if (!ffprobePath) return reject(new Error('ffprobe unavailable'));
       const proc = spawn(ffprobePath, [
         '-v', 'error',
         '-show_entries', 'format=duration,bit_rate',
@@ -85,7 +96,7 @@ ipcMain.handle('split-video', async (event, { inputPath, targetMB }) => {
       proc.stderr.on('data', chunk => errData += chunk);
       proc.on('close', (code) => {
         if (code !== 0) {
-          reject(new Error('ffprobe failed: ' + errData));
+          reject(new Error('ffprobe failed (code ' + code + '): ' + errData));
           return;
         }
         try {
@@ -94,14 +105,46 @@ ipcMain.handle('split-video', async (event, { inputPath, targetMB }) => {
           reject(e);
         }
       });
-      proc.on('error', reject);
+      proc.on('error', (err) => reject(new Error('ffprobe spawn error: ' + err.message)));
+    });
+  }
+
+  function ffmpegFallbackProbe() {
+    return new Promise((resolve, reject) => {
+      const proc = spawn(ffmpegPath, [
+        '-hide_banner', '-i', inputPath,
+        '-f', 'null', '-'
+      ]);
+      let stderr = '';
+      proc.stderr.on('data', chunk => stderr += chunk.toString());
+      proc.on('close', () => {
+        // Parse Duration: and bitrate: lines
+        const durMatch = /Duration:\s*(\d{2}):(\d{2}):(\d{2})\.(\d{2})/.exec(stderr);
+        const brMatch = /bitrate:\s*(\d+)\s*kb\/s/.exec(stderr);
+        if (!durMatch) return reject(new Error('Could not parse duration from ffmpeg output'));
+        const h = parseInt(durMatch[1],10); const m = parseInt(durMatch[2],10); const s = parseInt(durMatch[3],10); const cs = parseInt(durMatch[4],10);
+        const duration = h*3600 + m*60 + s + cs/100;
+        let bitrate = 0;
+        if (brMatch) bitrate = parseInt(brMatch[1],10) * 1000; // kb/s -> b/s
+        if (!bitrate) {
+          // Attempt average bitrate from size if available (not in stderr here) keep zero triggers copy path anyway
+          bitrate = 0;
+        }
+        resolve({ format: { duration, bit_rate: bitrate } });
+      });
+      proc.on('error', err => reject(new Error('ffmpeg fallback spawn error: ' + err.message)));
     });
   }
   let probe;
   try {
     probe = await ffprobePromise();
   } catch (e) {
-    return { error: 'Failed to probe video.' };
+    try {
+      const fb = await ffmpegFallbackProbe();
+      probe = fb;
+    } catch (fbErr) {
+      return { error: 'Failed to probe video: ' + e.message + ' | Fallback: ' + fbErr.message + ` | ffprobePath=${ffprobePath || 'null'} ffmpegPath=${ffmpegPath || 'null'}` };
+    }
   }
   const duration = parseFloat(probe.format.duration);
   const bitrate = parseInt(probe.format.bit_rate, 10);

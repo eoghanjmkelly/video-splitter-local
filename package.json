@@ -10,6 +10,7 @@
     "build:pkg:win": "pkg dist/index.js --targets node18-win-x64 --output releases/splitter-win-x64.exe",
     "build:pkg:mac": "pkg dist/index.js --targets node18-macos-x64 --output releases/splitter-mac-x64",
     "build:pkg:linux": "pkg dist/index.js --targets node18-linux-x64 --output releases/splitter-linux-x64",
+    "build:pkg:linux-cjs": "pkg tools/split-local.cjs --targets node18-linux-x64 --output releases/splitter-linux-x64-cjs",
     "build": "npm run build:bundle && npm run build:pkg:win && npm run build:pkg:mac && npm run build:pkg:linux"
   },
   "pkg": {
