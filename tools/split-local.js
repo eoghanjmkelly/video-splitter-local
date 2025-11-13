@@ -2,15 +2,63 @@
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import { spawn } from 'child_process';
+import { spawn, spawnSync } from 'child_process';
 import prompts from 'prompts';
 import ora from 'ora';
 import prettyBytes from 'pretty-bytes';
 import ffmpegPath from 'ffmpeg-static';
+import ffprobe from 'ffprobe-static';
 import ffmpeg from 'fluent-ffmpeg';
 
-// Set ffmpeg-static path for fluent-ffmpeg
-ffmpeg.setFfmpegPath(ffmpegPath);
+// --- Robust binary resolution (Linux-friendly) ---
+function which(cmd) {
+  try {
+    const isWin = process.platform === 'win32';
+    const res = spawnSync(isWin ? 'where' : 'which', [cmd], { encoding: 'utf8' });
+    if (res.status === 0 && res.stdout) {
+      const first = res.stdout.split(/\r?\n/).find(Boolean);
+      return first ? first.trim() : null;
+    }
+  } catch {}
+  return null;
+}
+
+function resolveFfmpeg() {
+  // Prefer bundled static binary, else fallback to system
+  try {
+    if (ffmpegPath && fs.existsSync(ffmpegPath)) return ffmpegPath;
+  } catch {}
+  const sys = which('ffmpeg');
+  if (sys) return sys;
+  return ffmpegPath; // best effort; spawn will error if unusable
+}
+
+function resolveFfprobe() {
+  // Prefer bundled ffprobe-static if present
+  try {
+    if (ffprobe && ffprobe.path && fs.existsSync(ffprobe.path)) return ffprobe.path;
+  } catch {}
+  // Try alongside ffmpeg binary by name replacement
+  try {
+    if (ffmpegPath) {
+      const guess = ffmpegPath.replace(/ffmpeg(\.exe)?$/, 'ffprobe$1');
+      if (fs.existsSync(guess)) return guess;
+    }
+  } catch {}
+  // Fallback to system ffprobe
+  const sys = which('ffprobe');
+  if (sys) return sys;
+  return null;
+}
+
+const resolvedFfmpeg = resolveFfmpeg();
+const resolvedFfprobe = resolveFfprobe();
+
+// Configure fluent-ffmpeg
+ffmpeg.setFfmpegPath(resolvedFfmpeg);
+if (resolvedFfprobe) {
+  try { ffmpeg.setFfprobePath(resolvedFfprobe); } catch {}
+}
 
 const DEFAULT_TARGET_MB = 1536;
 const TARGET_BYTES = (mb) => mb * 1024 * 1024;
@@ -26,6 +74,7 @@ function parseArgs() {
     else if (args[i] === '--targetMB') opts.targetMB = parseInt(args[++i], 10);
     else if (args[i] === '--deleteOriginal') opts.deleteOriginal = true;
     else if (args[i] === '--noPrompt') opts.noPrompt = true;
+    else if (args[i] === '--doctor') opts.doctor = true;
   }
   return opts;
 }
@@ -76,7 +125,7 @@ function checkSafetyGuard() {
 }
 
 function runFfmpeg(args, onProgress, onError, onClose) {
-  const proc = spawn(ffmpegPath, args, { stdio: ['ignore', 'ignore', 'pipe'] });
+  const proc = spawn(resolvedFfmpeg, args, { stdio: ['ignore', 'ignore', 'pipe'] });
   let lastTime = 0;
   proc.stderr.on('data', (chunk) => {
     const lines = chunk.toString().split(/\r?\n/);
@@ -141,6 +190,32 @@ async function main() {
   let deleteOriginal = !!args.deleteOriginal;
   let noPrompt = !!args.noPrompt;
 
+  if (args.doctor) {
+    console.log('Environment diagnostics (Linux-compatible):');
+    console.log('  Platform:', process.platform, process.arch);
+    console.log('  Node:', process.version);
+    console.log('  ffmpeg path:', resolvedFfmpeg);
+    try {
+      const v = spawnSync(resolvedFfmpeg, ['-version'], { encoding: 'utf8' });
+      console.log('  ffmpeg -version status:', v.status);
+      console.log(String(v.stdout || v.stderr).split(/\r?\n/)[0] || '(no output)');
+    } catch (e) {
+      console.log('  ffmpeg check error:', e.message);
+    }
+    console.log('  ffprobe path:', resolvedFfprobe || '(not found)');
+    if (resolvedFfprobe) {
+      try {
+        const v2 = spawnSync(resolvedFfprobe, ['-version'], { encoding: 'utf8' });
+        console.log('  ffprobe -version status:', v2.status);
+        console.log(String(v2.stdout || v2.stderr).split(/\r?\n/)[0] || '(no output)');
+      } catch (e) {
+        console.log('  ffprobe check error:', e.message);
+      }
+    }
+    console.log('Tip: On Linux Mint, ensure ffmpeg is installed: sudo apt install ffmpeg');
+    return;
+  }
+
   if (!inputPath || !fs.existsSync(inputPath)) {
     if (noPrompt) throw new Error('Input file required');
     const resp = await prompts({
@@ -177,7 +252,7 @@ async function main() {
     process.exit(1);
   }
   if (!bitrate) {
-    console.error('Could not determine bitrate.');
+    console.error('Could not determine bitrate. Ensure ffprobe is available (bundled or in PATH).');
     process.exit(1);
   }
 

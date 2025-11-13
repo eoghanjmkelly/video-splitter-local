@@ -74,5 +74,21 @@ npm install
 npm start
 ```
 
+### Linux Mint notes
+
+- Install ffmpeg from your package manager:
+	- `sudo apt update && sudo apt install -y ffmpeg`
+- If you use the AppImage and it does not start, install FUSE v2 runtime:
+	- `sudo apt install -y libfuse2`
+- You can also run the CLI splitter directly without packaging:
+	- `npm install`
+	- `npm run doctor` to verify ffmpeg/ffprobe detection
+	- `node tools/split-local.js --input /path/to/video.mp4 --targetMB 1536`
+	- Add `--deleteOriginal` to remove the source after successful split
+
+Troubleshooting:
+- If probing fails with "Could not determine bitrate", ensure `ffprobe` is available. The tool tries the bundled static binary first and falls back to the system `ffprobe`.
+- On some systems, the system `ffmpeg` may be preferred for best compatibility. The splitter will automatically use it when detected.
+
 ## License
 Licensed under the MIT License – see `LICENSE`. See also `THIRD_PARTY_NOTICES.md` for bundled third‑party licenses and notices.

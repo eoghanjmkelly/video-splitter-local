@@ -5,6 +5,7 @@
   },
   "scripts": {
     "start": "node tools/split-local.js",
+    "doctor": "node tools/split-local.js --doctor",
     "build:bundle": "ncc build tools/split-local.js -o dist",
     "build:pkg:win": "pkg dist/index.js --targets node18-win-x64 --output releases/splitter-win-x64.exe",
     "build:pkg:mac": "pkg dist/index.js --targets node18-macos-x64 --output releases/splitter-mac-x64",
@@ -13,11 +14,13 @@
   },
   "pkg": {
     "assets": [
-      "node_modules/ffmpeg-static/**"
+      "node_modules/ffmpeg-static/**",
+      "node_modules/ffprobe-static/**"
     ]
   },
   "dependencies": {
     "ffmpeg-static": "^5",
+    "ffprobe-static": "^3",
     "fluent-ffmpeg": "^2",
     "prompts": "^2",
     "ora": "^8",

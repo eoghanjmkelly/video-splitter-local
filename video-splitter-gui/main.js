@@ -2,16 +2,32 @@ const { app, BrowserWindow, dialog, ipcMain } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
-const { spawn } = require('child_process');
+const { spawn, spawnSync } = require('child_process');
+
+function which(cmd) {
+  try {
+    const isWin = process.platform === 'win32';
+    const out = spawnSync(isWin ? 'where' : 'which', [cmd], { encoding: 'utf8' });
+    if (out.status === 0 && out.stdout) {
+      const first = out.stdout.split(/\r?\n/).find(Boolean);
+      return first ? first.trim() : null;
+    }
+  } catch {}
+  return null;
+}
 
 function resolveBinary(baseModulePath, binaryName) {
-  const defaultPath = baseModulePath;
-  const candidates = [defaultPath];
+  const defaultPath = baseModulePath; // e.g. ffmpeg-static path string
+  const candidates = [];
+  if (defaultPath) candidates.push(defaultPath);
   if (app.isPackaged) {
     const binFile = process.platform === 'win32' ? `${binaryName}.exe` : binaryName;
     candidates.push(path.join(process.resourcesPath, 'app.asar.unpacked', 'node_modules', `${binaryName}-static`, binFile));
     candidates.push(path.join(process.resourcesPath, 'app', 'node_modules', `${binaryName}-static`, binFile));
   }
+  // Fallback to system PATH
+  const sys = which(binaryName);
+  if (sys) candidates.push(sys);
   for (const p of candidates) {
     try { if (p && fs.existsSync(p)) return p; } catch {}
   }
@@ -23,7 +39,8 @@ let ffprobePath;
 try {
   ffprobePath = resolveBinary(require('ffprobe-static').path, 'ffprobe');
 } catch (e) {
-  ffprobePath = ffmpegPath.replace(/ffmpeg(\.exe)?$/, 'ffprobe$1');
+  const sys = which('ffprobe');
+  ffprobePath = sys || ffmpegPath.replace(/ffmpeg(\.exe)?$/, 'ffprobe$1');
 }
 
 let prettyBytes;
